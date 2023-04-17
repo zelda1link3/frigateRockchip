@@ -2,7 +2,7 @@ click == 8.1.*
 Flask == 2.2.*
 imutils == 0.5.*
 matplotlib == 3.6.*
-mypy == 0.942
+mypy == 1.2.0
 numpy == 1.23.*
 opencv-python-headless == 4.5.5.*
 paho-mqtt == 1.6.*
