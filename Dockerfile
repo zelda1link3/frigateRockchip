@@ -7,7 +7,7 @@ FROM debian:11 AS base
 
 FROM --platform=linux/amd64 debian:11 AS base_amd64
 
-FROM debian:11-slim AS slim-base
+FROM ubuntu:22.04 AS slim-base
 
 FROM slim-base AS wget
 ARG DEBIAN_FRONTEND
@@ -159,7 +159,7 @@ COPY --from=models /rootfs/ /
 COPY docker/rootfs/ /
 
 
-# Frigate deps (ffmpeg, python, nginx, go2rtc, s6-overlay, etc)
+# Frigate deps (python, nginx, go2rtc, s6-overlay, etc)
 FROM slim-base AS deps
 ARG TARGETARCH
 
@@ -171,7 +171,7 @@ ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES="compute,video,utility"
 
-ENV PATH="/usr/lib/btbn-ffmpeg/bin:/usr/local/go2rtc/bin:/usr/local/nginx/sbin:${PATH}"
+ENV PATH="/usr/local/go2rtc/bin:/usr/local/nginx/sbin:${PATH}"
 
 # Install dependencies
 RUN --mount=type=bind,source=docker/install_deps.sh,target=/deps/install_deps.sh \
@@ -181,6 +181,25 @@ RUN --mount=type=bind,from=wheels,source=/wheels,target=/deps/wheels \
     pip3 install -U /deps/wheels/*.whl
 
 COPY --from=deps-rootfs / /
+
+# Update package list
+RUN apt-get update
+
+# Install necessary packages for adding PPA
+RUN apt-get install -y software-properties-common gpg gpg-agent udev
+
+# Add the PPA
+RUN add-apt-repository -y ppa:liujianfeng1994/rockchip-multimedia
+
+# Update package list again
+RUN apt-get update
+
+# Install the required packages
+RUN apt-get install -y rockchip-multimedia-config gstreamer1.0-rockchip1 ffmpeg
+
+# Clean up the package cache
+RUN apt-get clean && \
+   rm -rf /var/lib/apt/lists/*
 
 RUN ldconfig
 
