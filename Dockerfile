@@ -32,6 +32,7 @@ RUN wget -qO go2rtc "https://github.com/AlexxIT/go2rtc/releases/download/v1.2.0/
     && chmod +x go2rtc
 
 
+
 ####
 #
 # OpenVino Support
@@ -159,11 +160,19 @@ COPY --from=s6-overlay /rootfs/ /
 COPY --from=models /rootfs/ /
 COPY docker/rootfs/ /
 
+# Collect deps in a single layer
+FROM --platform=linux/arm64 scratch AS deps-rootfsarm
+COPY --from=nginx /usr/local/nginx/ /usr/local/nginx/
+COPY --from=go2rtc /rootfs/ /
+COPY --from=libusb-build /usr/local/lib /usr/local/lib
+COPY --from=s6-overlay /rootfs/ /
+COPY --from=models /rootfs/ /
+COPY docker/rootfs/ /
+
 
 # Frigate deps (python, nginx, go2rtc, s6-overlay, etc)
-FROM slim-base AS deps
+FROM --platform=linux/arm64 debian:11-slim  AS deps
 ARG TARGETARCH
-
 ARG DEBIAN_FRONTEND
 # http://stackoverflow.com/questions/48162574/ddg#49462622
 ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
@@ -181,7 +190,7 @@ RUN --mount=type=bind,source=docker/install_deps.sh,target=/deps/install_deps.sh
 RUN --mount=type=bind,from=wheels,source=/wheels,target=/deps/wheels \
     pip3 install -U /deps/wheels/*.whl
 
-COPY --from=deps-rootfs / /
+COPY --from=deps-rootfsarm / /
 
 RUN ldconfig
 
