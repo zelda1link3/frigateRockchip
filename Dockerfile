@@ -2,12 +2,13 @@
 
 # https://askubuntu.com/questions/972516/debian-frontend-environment-variable
 ARG DEBIAN_FRONTEND=noninteractive
+ARG TARGETARCH=arm64
 
 FROM debian:11 AS base
 
 FROM --platform=linux/amd64 debian:11 AS base_amd64
 
-FROM ubuntu:22.04 AS slim-base
+FROM debian:11-slim AS slim-base
 
 FROM slim-base AS wget
 ARG DEBIAN_FRONTEND
@@ -181,25 +182,6 @@ RUN --mount=type=bind,from=wheels,source=/wheels,target=/deps/wheels \
     pip3 install -U /deps/wheels/*.whl
 
 COPY --from=deps-rootfs / /
-
-# Update package list
-RUN apt-get update
-
-# Install necessary packages for adding PPA
-RUN apt-get install -y software-properties-common gpg gpg-agent udev
-
-# Add the PPA
-RUN add-apt-repository -y ppa:liujianfeng1994/rockchip-multimedia
-
-# Update package list again
-RUN apt-get update
-
-# Install the required packages
-RUN apt-get install -y rockchip-multimedia-config gstreamer1.0-rockchip1 ffmpeg
-
-# Clean up the package cache
-RUN apt-get clean && \
-   rm -rf /var/lib/apt/lists/*
 
 RUN ldconfig
 
